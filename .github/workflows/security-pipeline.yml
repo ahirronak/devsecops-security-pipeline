@@ -47,7 +47,7 @@ jobs:
             -Dsonar.qualitygate.timeout=300
 
       - name: Trivy dependency, secret, and misconfiguration scan
-        id: trivy
+        id: trivy_fs
         continue-on-error: true
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -59,16 +59,39 @@ jobs:
           format: table
           skip-dirs: .venv
 
+      - name: Build Docker image
+        id: docker_build
+        run: docker build --tag devsecops-security-pipeline:${{ github.sha }} .
+
+      - name: Trivy Docker image scan
+        id: trivy_image
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: devsecops-security-pipeline:${{ github.sha }}
+          scanners: vuln,secret,misconfig
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: "1"
+          format: table
+
       - name: Enforce security gate
         if: always()
         env:
           SONAR_RESULT: ${{ steps.sonar.outcome }}
-          TRIVY_RESULT: ${{ steps.trivy.outcome }}
+          TRIVY_FS_RESULT: ${{ steps.trivy_fs.outcome }}
+          DOCKER_BUILD_RESULT: ${{ steps.docker_build.outcome }}
+          TRIVY_IMAGE_RESULT: ${{ steps.trivy_image.outcome }}
         run: |
           echo "SonarQube result: $SONAR_RESULT"
-          echo "Trivy result: $TRIVY_RESULT"
+          echo "Trivy source scan result: $TRIVY_FS_RESULT"
+          echo "Docker build result: $DOCKER_BUILD_RESULT"
+          echo "Trivy image scan result: $TRIVY_IMAGE_RESULT"
 
-          if [ "$SONAR_RESULT" != "success" ] || [ "$TRIVY_RESULT" != "success" ]; then
+          if [ "$SONAR_RESULT" != "success" ] || \
+             [ "$TRIVY_FS_RESULT" != "success" ] || \
+             [ "$DOCKER_BUILD_RESULT" != "success" ] || \
+             [ "$TRIVY_IMAGE_RESULT" != "success" ]; then
             echo "Security gate failed. Build and deployment are blocked."
             exit 1
           fi
