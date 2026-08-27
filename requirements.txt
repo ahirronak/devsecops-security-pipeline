@@ -1,0 +1,7 @@
+# Intentionally outdated versions for Trivy SCA demonstrations.
+# These versions are for a local training project only.
+Flask==2.2.5
+Jinja2==3.1.2
+Werkzeug==2.2.3
+requests==2.31.0
+pytest==7.4.4
