@@ -77,3 +77,6 @@ missing anti-clickjacking protection and a missing Content Security Policy.
 HTML, JSON, and Markdown ZAP reports are uploaded to the GitHub Actions run as
 an artifact and retained for 14 days. The temporary application is removed
 after every scan, including failed scans.
+
+
+Manual pipeline test.
