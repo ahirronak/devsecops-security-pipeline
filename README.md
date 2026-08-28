@@ -48,13 +48,18 @@ docker run --rm -p 5000:5000 secure-flask-app
 The container definition intentionally omits a non-root `USER` instruction so
 that a later Trivy misconfiguration scan has an additional training finding.
 
-## Phase 5 security gate setup
+## Automated security pipeline
 
 The GitHub Actions workflow now runs these checks in order:
 
 1. pytest
 2. SonarQube Cloud SAST and Quality Gate
 3. Trivy dependency, secret, and Dockerfile misconfiguration scan
+4. Docker image build
+5. Trivy Docker image vulnerability scan
+6. Temporary application container startup and health check
+7. OWASP ZAP baseline DAST scan against the running container
+8. Final security gate enforcement
 
 Before pushing the workflow, configure the following GitHub repository values:
 
@@ -65,3 +70,10 @@ Before pushing the workflow, configure the following GitHub repository values:
 Copy the organization and project keys from the SonarQube Cloud project setup.
 Trivy is configured to fail the security gate for Medium, High, or Critical
 findings. No vulnerability exceptions are configured in this training version.
+
+ZAP performs a passive baseline scan in an isolated Docker network. The rules
+in `.zap/rules.tsv` promote two Medium-risk findings to blocking failures:
+missing anti-clickjacking protection and a missing Content Security Policy.
+HTML, JSON, and Markdown ZAP reports are uploaded to the GitHub Actions run as
+an artifact and retained for 14 days. The temporary application is removed
+after every scan, including failed scans.
