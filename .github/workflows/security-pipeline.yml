@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   security-gate:
@@ -160,3 +161,27 @@ jobs:
           fi
 
           echo "Security gate passed."
+
+      - name: Log in to GitHub Container Registry
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish approved image to GHCR
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          SOURCE_IMAGE: devsecops-security-pipeline:${{ github.sha }}
+          GHCR_IMAGE: ghcr.io/${{ github.repository }}
+        run: |
+          GHCR_IMAGE=$(echo "$GHCR_IMAGE" | tr '[:upper:]' '[:lower:]')
+          APPROVED_IMAGE="$GHCR_IMAGE:${{ github.sha }}"
+
+          docker tag "$SOURCE_IMAGE" "$APPROVED_IMAGE"
+          docker push "$APPROVED_IMAGE"
+
+          echo "Published approved image: $APPROVED_IMAGE"
+          echo "### Approved container image" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`$APPROVED_IMAGE\`" >> "$GITHUB_STEP_SUMMARY"

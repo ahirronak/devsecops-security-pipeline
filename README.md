@@ -60,6 +60,7 @@ The GitHub Actions workflow now runs these checks in order:
 6. Temporary application container startup and health check
 7. OWASP ZAP baseline DAST scan against the running container
 8. Final security gate enforcement
+9. Approved Docker image publication to GitHub Container Registry (GHCR)
 
 Before pushing the workflow, configure the following GitHub repository values:
 
@@ -78,5 +79,18 @@ HTML, JSON, and Markdown ZAP reports are uploaded to the GitHub Actions run as
 an artifact and retained for 14 days. The temporary application is removed
 after every scan, including failed scans.
 
+## Conditional image publishing
 
-Manual pipeline test.
+On pushes to `main`, an image is published to GHCR only when every test and
+security check passes. Pull requests are scanned but never publish images. Each
+approved image uses the immutable Git commit SHA as its tag:
+
+```text
+ghcr.io/ahirronak/devsecops-security-pipeline:<commit-sha>
+```
+
+The workflow uses GitHub's temporary `GITHUB_TOKEN`, so no registry password or
+personal access token needs to be stored. The intentionally vulnerable version
+is preserved by the Git tag `vulnerable-demo-v1`; its failed security gate
+prevents it from being published.
+>>>>>>> b6abce0 (feat: publish approved images to GHCR)
