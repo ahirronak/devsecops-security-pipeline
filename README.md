@@ -1,7 +1,7 @@
 # DevSecOps Security Pipeline
 
-> **Warning:** This repository begins with an intentionally vulnerable Flask
-> application for local security-scanner training. Do not deploy it publicly.
+> The `vulnerable-demo-v1` tag contains the intentionally vulnerable training
+> version. The `main` branch contains the remediated application.
 
 The application provides a minimal target for demonstrating:
 
@@ -10,23 +10,38 @@ The application provides a minimal target for demonstrating:
 - Trivy container image scanning
 - OWASP ZAP dynamic application security testing (DAST)
 
-## Current training weaknesses
+## Remediation demonstrated
 
-- Reflected cross-site scripting in `/search`
-- A fake hard-coded administrator password
-- Weak MD5 hashing in `/hash`
-- Flask debug mode enabled
-- Missing common HTTP security headers
-- Intentionally outdated Python dependencies
+- Escaped untrusted search input to prevent reflected cross-site scripting
+- Removed the unnecessary hard-coded administrator login
+- Replaced MD5 with SHA-256
+- Disabled Flask debug mode and used Gunicorn in the container
+- Added CSP, anti-clickjacking, content-type and privacy headers
+- Upgraded and separated runtime and development dependencies
+- Changed to a smaller Alpine image running as a non-root user
 
-These weaknesses will later be fixed to demonstrate a failed pipeline followed
-by successful remediation.
+The preserved tag and current branch demonstrate a failed pipeline followed by
+security remediation.
+
+## Before and after results
+
+These counts were observed during the local remediation scans. Vulnerability
+databases change over time, so future totals may differ.
+
+| Security check | Vulnerable tag | Remediated main branch |
+| --- | ---: | ---: |
+| Unit tests | 5 passed | 5 passed |
+| Trivy dependency vulnerabilities | 16 | 0 |
+| Trivy Dockerfile misconfigurations | 1 | 0 |
+| Trivy image vulnerabilities | 101 | 0 |
+| ZAP blocking findings | 2 | 0 |
+| Container runtime user | root | `appuser` (UID 10001) |
 
 ## Run locally
 
 ```bash
 python -m venv .venv
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 python app.py
 ```
 
@@ -41,12 +56,11 @@ python -m pytest
 ## Run with Docker
 
 ```bash
-docker build -t secure-flask-app .
-docker run --rm -p 5000:5000 secure-flask-app
+docker build -t devsecops-secure-app .
+docker run --rm -p 5000:5000 devsecops-secure-app
 ```
 
-The container definition intentionally omits a non-root `USER` instruction so
-that a later Trivy misconfiguration scan has an additional training finding.
+The container uses Gunicorn and runs as the unprivileged `appuser` account.
 
 ## Automated security pipeline
 

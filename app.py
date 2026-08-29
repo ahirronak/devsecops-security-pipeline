@@ -1,30 +1,46 @@
-"""Intentionally vulnerable Flask app for local DevSecOps training only.
-
-Do not expose this application to the internet or use its patterns in a real app.
-The weaknesses are present so SonarQube, Trivy, and OWASP ZAP have findings to
-detect during later phases of the project.
-"""
+"""Minimal Flask application used to demonstrate a secured CI/CD pipeline."""
 
 import hashlib
+from html import escape
 
 from flask import Flask, jsonify, request
 
 
 app = Flask(__name__)
 
-# Intentionally insecure: fake hard-coded training credential for SAST testing.
-ADMIN_PASSWORD = "admin123"
+
+@app.after_request
+def add_security_headers(response):
+    """Apply browser security controls to every application response."""
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; base-uri 'self'; form-action 'self'; "
+        "frame-ancestors 'none'"
+    )
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = (
+        "camera=(), geolocation=(), microphone=()"
+    )
+    response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/")
 def home():
-    """Return a tiny page that gives ZAP a few routes to discover."""
+    """Return the small application page discovered by OWASP ZAP."""
     return """
     <!doctype html>
     <html lang="en">
-      <head><title>DevSecOps Training App</title></head>
+      <head>
+        <meta charset="utf-8">
+        <title>DevSecOps Secure App</title>
+      </head>
       <body>
-        <h1>DevSecOps Training App</h1>
+        <h1>DevSecOps Secure App</h1>
 
         <form action="/search" method="get">
           <label for="q">Search</label>
@@ -32,13 +48,7 @@ def home():
           <button type="submit">Search</button>
         </form>
 
-        <form action="/login" method="post">
-          <label for="username">Username</label>
-          <input id="username" name="username" type="text">
-          <label for="password">Password</label>
-          <input id="password" name="password" type="password">
-          <button type="submit">Log in</button>
-        </form>
+        <p><a href="/hash?value=demo">Generate a SHA-256 example</a></p>
       </body>
     </html>
     """
@@ -46,37 +56,24 @@ def home():
 
 @app.get("/health")
 def health():
-    """Health endpoint used by tests and the future CI pipeline."""
-    return jsonify(status="ok", application="devsecops-training-app")
+    """Return application health for tests and the CI pipeline."""
+    return jsonify(status="ok", application="devsecops-secure-app")
 
 
 @app.get("/search")
 def search():
-    """Intentionally reflect input without escaping it (reflected XSS)."""
-    query = request.args.get("q", "")
-    return f"<h1>Search results</h1><p>You searched for: {query}</p>"
-
-
-@app.post("/login")
-def login():
-    """Intentionally use a hard-coded password and simplistic authentication."""
-    username = request.form.get("username", "")
-    password = request.form.get("password", "")
-
-    if username == "admin" and password == ADMIN_PASSWORD:
-        return jsonify(message="Login successful", user=username)
-
-    return jsonify(message="Invalid credentials"), 401
+    """Display user input only after HTML escaping it."""
+    safe_query = escape(request.args.get("q", ""), quote=True)
+    return f"<h1>Search results</h1><p>You searched for: {safe_query}</p>"
 
 
 @app.get("/hash")
-def weak_hash():
-    """Intentionally use MD5 so the SAST scanner can report weak cryptography."""
+def secure_hash():
+    """Return a SHA-256 digest for the supplied demonstration value."""
     value = request.args.get("value", "demo")
-    digest = hashlib.md5(value.encode("utf-8")).hexdigest()  # noqa: S324
-    return jsonify(value=value, md5=digest)
+    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
+    return jsonify(value=value, sha256=digest)
 
 
 if __name__ == "__main__":
-    # Intentionally insecure: debug mode must never be enabled in production.
-    app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)
+    app.run(host="127.0.0.1", port=5000, debug=False)

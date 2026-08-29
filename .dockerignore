@@ -1,5 +1,6 @@
 .git
 .github
+.zap
 .pytest_cache
 .venv
 __pycache__
@@ -7,3 +8,5 @@ tests
 reports
 *.pyc
 README.md
+requirements-dev.txt
+sonar-project.properties
