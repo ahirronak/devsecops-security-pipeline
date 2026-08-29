@@ -50,8 +50,11 @@ Open <http://localhost:5000> or check <http://localhost:5000/health>.
 ## Run tests
 
 ```bash
-python -m pytest
+python -m pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml
 ```
+
+The XML report is imported by SonarQube Cloud. The Quality Gate requires at
+least 80% coverage on new code; the current test suite covers 97% locally.
 
 ## Run with Docker
 
@@ -66,8 +69,8 @@ The container uses Gunicorn and runs as the unprivileged `appuser` account.
 
 The GitHub Actions workflow now runs these checks in order:
 
-1. pytest
-2. SonarQube Cloud SAST and Quality Gate
+1. pytest tests and XML coverage report generation
+2. SonarQube Cloud SAST, coverage import, and Quality Gate
 3. Trivy dependency, secret, and Dockerfile misconfiguration scan
 4. Docker image build
 5. Trivy Docker image vulnerability scan
@@ -107,4 +110,3 @@ The workflow uses GitHub's temporary `GITHUB_TOKEN`, so no registry password or
 personal access token needs to be stored. The intentionally vulnerable version
 is preserved by the Git tag `vulnerable-demo-v1`; its failed security gate
 prevents it from being published.
->>>>>>> b6abce0 (feat: publish approved images to GHCR)

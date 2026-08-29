@@ -3,5 +3,8 @@ __pycache__/
 .venv/
 venv/
 *.py[cod]
+.coverage
+coverage.xml
+htmlcov/
 reports/*
 !reports/.gitkeep

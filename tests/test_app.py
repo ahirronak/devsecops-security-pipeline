@@ -50,3 +50,7 @@ def test_security_headers_are_applied():
     assert response.headers["X-Content-Type-Options"] == "nosniff"
     assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
     assert response.headers["Referrer-Policy"] == "no-referrer"
+
+
+def test_csrf_protection_is_enabled():
+    assert "csrf" in app.extensions
